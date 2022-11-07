@@ -2,10 +2,19 @@ package test;
 
 import com.accesodatos.Address;
 import com.accesodatos.AddressBook;
-
-import java.io.FileNotFoundException;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.File;
 import java.io.IOException;
-import java.rmi.AccessException;
+import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class AddressBookTest {
@@ -65,7 +74,12 @@ public class AddressBookTest {
                         int size = addressBook.getNumRecords();
                         addressBook.close();
                         System.out.println(size);
-                        if (userInputId < 0 || userInputId > size){
+
+                        if(userInputId <= 0){
+                            throw new IndexOutOfBoundsException("ID Inválido");
+                        }
+
+                        if( userInputId > size){
                             throw new IndexOutOfBoundsException("ID excede del número de registros");
                         }
                         addressBook.open();
@@ -118,9 +132,81 @@ public class AddressBookTest {
                     break;
 
                 case "4":
+                    // Show all Data points.
+                    try {
+                        addressBook.open();
+
+                        int position = 0;
+                        int id;
+                        RandomAccessFile raf = addressBook.raf;
+                        ArrayList<Address> addresses  = new ArrayList<>();
+                        String name;
+                        String phone;
+                        String email;
+                        int age;
+                        while(raf.getFilePointer() != raf.length()) {
+                            id = raf.readInt();
+                            name = getStringDataFromFile("name", raf);
+                            phone = getStringDataFromFile("phone",raf);
+                            email = getStringDataFromFile("email",raf);
+                            age = raf.readInt();
+
+                            addresses.add(new Address(id,name,phone,email,age));
+                            position += 128;
+                        }
+                        addressBook.close();
+                        showAddressBook(addresses);
+
+                        System.out.print("Presione Enter para continuar... ");
+                        sc.nextLine();
+
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                     break;
 
                 case "5":
+                    System.out.println("Inicio de la importacion");
+                    List<Address> addresses = new ArrayList<>();
+                    DocumentBuilderFactory xmlParserBuilderFactory =  DocumentBuilderFactory.newInstance();
+                    try {
+                        DocumentBuilder xmlParserBuilder = xmlParserBuilderFactory.newDocumentBuilder();
+                        Document xml = xmlParserBuilder.parse(new File("address.xml"));
+                        xml.getDocumentElement().normalize();
+                        NodeList nodes = xml.getElementsByTagName("address");
+
+
+                        for (int i = 0; i <nodes.getLength(); i++) {
+                            Node node = nodes.item(i);
+                            if (node.getNodeType() == Node.ELEMENT_NODE){
+                                addressBook.open();
+                                int id = addressBook.getNumRecords();
+                                Element nodeElement = (Element) node;
+                                String name = nodeElement.getElementsByTagName("name").item(0).getTextContent();
+                                String email = nodeElement.getElementsByTagName("email").item(0).getTextContent();
+                                String phone = nodeElement.getElementsByTagName("phone").item(0).getTextContent();
+                                int age = Integer.parseInt(nodeElement.getElementsByTagName("age").item(0).getTextContent().trim());
+                                Address addressToAdd = new Address(id,name,phone,email,age);
+                                addressBook.append(addressToAdd);
+                                addresses.add(addressToAdd);
+                                addressBook.close();
+                            }
+                        }
+                        System.out.println("Importación finalizada");
+                        System.out.println("Datos importado... ");
+                        addresses.stream().forEach(address -> System.out.println(address.toString()));
+                        System.out.print("Presione Enter para continuar... ");
+                        sc.nextLine();
+
+                    } catch (ParserConfigurationException e) {
+                        throw new RuntimeException(e);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } catch (SAXException e) {
+                        throw new RuntimeException(e);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                     break;
 
                 case "6":
@@ -175,4 +261,62 @@ public class AddressBookTest {
         System.out.println(asciiTable[2] + asciiTable[5].repeat(43) + asciiTable[3]);
     }
 
+    private static void showAddressBook(List<Address> addresses){
+        String asciiTable[] = {"┌", "┐", "└", "┘", "│", "─", "┼" , "┤", "├", "┬", "┴"};
+        String tableTopSide =    asciiTable[0] + asciiTable[5].repeat(4 ) + asciiTable[9] + asciiTable[5].repeat(26)
+                + asciiTable[9] + asciiTable[5].repeat(31) + asciiTable[9] + asciiTable[5].repeat(16)
+                + asciiTable[9] + asciiTable[5].repeat(6) + asciiTable[1];
+
+        String tableBottomSide = asciiTable[2] + asciiTable[5].repeat(4 ) + asciiTable[10] + asciiTable[5].repeat(26)
+                + asciiTable[10] + asciiTable[5].repeat(31) + asciiTable[10] + asciiTable[5].repeat(16)
+                + asciiTable[10] + asciiTable[5].repeat(6) + asciiTable[3];
+
+        System.out.println(tableTopSide);
+        System.out.println(
+                asciiTable[4] + " Id " + asciiTable[4] + " Nombre" + " ".repeat(19)
+                + asciiTable[4] + " Email" + " ".repeat(25) + asciiTable[4] + " Telefono"
+                + " ".repeat(7) + asciiTable[4] + " Edad " + asciiTable[4]
+                );
+        System.out.println(tableBottomSide);
+
+        // Filing the table
+        System.out.println(tableTopSide);
+        for (Address address : addresses){
+            System.out.println(
+                    asciiTable[4] + " " + address.getId() + "  " +  asciiTable[4] +
+                    " " + address.getName() + asciiTable[4] +
+                    " " + address.getEmail() + asciiTable[4] +
+                    " " + address.getPhone() + asciiTable[4] +
+                    "  " + address.getAge() +  "  " +  asciiTable[4]
+                    );
+        }
+        System.out.println(tableBottomSide);
+
+        String dataSize = ""+32;
+        int maxlength = 2;
+        String middleLine = asciiTable[4] + " Nº de registros : " + dataSize + "".repeat((maxlength - dataSize.length()));
+        // data array size presentation
+        System.out.println(asciiTable[0] + asciiTable[5].repeat(tableTopSide.length() - 2) + asciiTable[1]);
+        System.out.println(middleLine + " ".repeat(tableTopSide.length() - (middleLine.length() + 1)) + asciiTable[4]);
+        System.out.println(asciiTable[2] + asciiTable[5].repeat(tableBottomSide.length() - 2) + asciiTable[3]);
+    }
+
+    private static String getStringDataFromFile (String mode, RandomAccessFile raf) throws IOException {
+        int charSize = 0;
+        if (mode.equals("name")) charSize = 25;
+        if (mode.equals("phone")) charSize = 15;
+        if (mode.equals("email")) charSize = 30;
+        char aux;
+        char[] charToString = new char[charSize];
+
+        for (int i = 0; i < charToString.length ; i++) {
+            aux = raf.readChar();
+            charToString[i] = aux;
+        }
+
+        String stringToReturn =  new String(charToString).trim();
+        stringToReturn += " ".repeat(charSize - stringToReturn.length());
+
+        return  stringToReturn;
+    }
 }

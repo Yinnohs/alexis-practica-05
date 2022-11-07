@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<addressbook>
+    <address id="1">
+        <name>Prueba 1</name>
+        <email>prueba@jose.com</email>
+        <phone>666-444-666</phone>
+        <age> 15</age>
+    </address>
+    <address id="2">
+        <name>Prueba 2</name>
+        <email>prueba2@jose.com</email>
+        <phone>888-999-000</phone>
+        <age>24</age>
+    </address>
+    <address id="3">
+        <name>Prueba 3</name>
+        <email>prueba3@jose.com</email>
+        <phone>000-111-222</phone>
+        <age>36</age>
+    </address>
+</addressbook>
