@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<addressbook>
+    <address id="1">
+        <name>jose</name>
+        <email>jose€jose.com</email>
+        <phone>666-777-888</phone>
+        <age>12</age>
+    </address>
+    <address id="2">
+        <name>andres</name>
+        <email>andres@jose.com</email>
+        <phone>9998877635</phone>
+        <age>78</age>
+    </address>
+    <address id="3">
+        <name>wolfgang</name>
+        <email>wolfgang@jose.com</email>
+        <phone>44567-666543</phone>
+        <age>65</age>
+    </address>
+</addressbook>

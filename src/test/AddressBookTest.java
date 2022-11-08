@@ -2,15 +2,19 @@ package test;
 
 import com.accesodatos.Address;
 import com.accesodatos.AddressBook;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
@@ -40,7 +44,7 @@ public class AddressBookTest {
                     try {
                         addressBook.open();
                         int id = addressBook.getNumRecords();
-                        if (id == 0) id =1;
+                        if (id == 0) id = 1;
 
                         System.out.print("Introduzca el Nombre: ");
                         String addressName = sc.nextLine();
@@ -135,8 +139,6 @@ public class AddressBookTest {
                     // Show all Data points.
                     try {
                         addressBook.open();
-
-                        int position = 0;
                         int id;
                         RandomAccessFile raf = addressBook.raf;
                         ArrayList<Address> addresses  = new ArrayList<>();
@@ -152,7 +154,6 @@ public class AddressBookTest {
                             age = raf.readInt();
 
                             addresses.add(new Address(id,name,phone,email,age));
-                            position += 128;
                         }
                         addressBook.close();
                         showAddressBook(addresses);
@@ -210,6 +211,55 @@ public class AddressBookTest {
                     break;
 
                 case "6":
+                    //exportar a XML
+                    DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+                    List<Address> addressesToExport = new ArrayList<>();
+                    try {
+                        int id;
+                        String name;
+                        String phone;
+                        String email;
+                        int age;
+                        addressBook.open();
+                        RandomAccessFile  raf = addressBook.raf;
+                        while(raf.getFilePointer() != raf.length()) {
+                            id = raf.readInt();
+                            name = getStringDataFromFile("name", raf);
+                            phone = getStringDataFromFile("phone",raf);
+                            email = getStringDataFromFile("email",raf);
+                            age = raf.readInt();
+
+                            addressesToExport.add(new Address(id,name,phone,email,age));
+                        }
+                        addressBook.close();
+
+
+                        DocumentBuilder builder = documentBuilderFactory.newDocumentBuilder();
+                        DOMImplementation dom = builder.getDOMImplementation();
+                        Document document = dom.createDocument(null,"addressbook",null);
+                        document.setXmlVersion("1.0");
+
+                        for (Address address : addressesToExport){
+                            Element addressElement = document.createElement("address");
+                            addressElement.setAttribute("id", "" + address.getId());
+                            createAddressXmlNode("name",address.getName().trim(),document,addressElement);
+                            createAddressXmlNode("email", address.getEmail().trim(),document,addressElement);
+                            createAddressXmlNode("phone",address.getPhone().trim(),document,addressElement);
+                            createAddressXmlNode("age", ""+ address.getAge(),document,addressElement);
+                            document.getDocumentElement().appendChild(addressElement);
+                        };
+                        Source source = new DOMSource(document);
+                        Result result = new StreamResult(new File("addressExport.xml"));
+                        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+                        transformer.transform(source,result);
+
+                        System.out.println("Archivos exportados.... " + addressesToExport.size());
+                        System.out.print("Presione Enter para continuar...");
+                        sc.nextLine();
+
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                     break;
 
                 case "7":
@@ -292,7 +342,7 @@ public class AddressBookTest {
         }
         System.out.println(tableBottomSide);
 
-        String dataSize = ""+32;
+        String dataSize = ""+ addresses.size();
         int maxlength = 2;
         String middleLine = asciiTable[4] + " Nº de registros : " + dataSize + "".repeat((maxlength - dataSize.length()));
         // data array size presentation
@@ -318,5 +368,12 @@ public class AddressBookTest {
         stringToReturn += " ".repeat(charSize - stringToReturn.length());
 
         return  stringToReturn;
+    }
+
+    private static void createAddressXmlNode(String tagName, String tagValue, Document xmlDocument, Element parentNode){
+        Element xmlElement = xmlDocument.createElement(tagName);
+        Text nodeValue = xmlDocument.createTextNode(tagValue);
+        xmlElement.appendChild(nodeValue);
+        parentNode.appendChild(xmlElement);
     }
 }
